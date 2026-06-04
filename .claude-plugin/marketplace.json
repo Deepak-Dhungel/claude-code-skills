@@ -1,0 +1,20 @@
+{
+  "name": "deepak-claude-skills",
+  "owner": {
+    "name": "Deepak Dhungel",
+    "email": "deepak.dhungel0510@gmail.com"
+  },
+  "metadata": {
+    "description": "A curated collection of Claude Code skills for frontend development and data workflows.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "frontend-skills",
+      "description": "Frontend component architecture and UI development skills",
+      "source": "./",
+      "strict": false,
+      "skills": ["./.claude/skills/frontend/component-architecture"]
+    }
+  ]
+}
