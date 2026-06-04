@@ -1,60 +1,135 @@
 ---
 name: component-architecture
-description: "Use this when creating, editing, refactoring, or reviewing any UI component, layout, page, or frontend interface element in the project"
+description: "Use this when creating, editing, refactoring, or reviewing any components, UI systems, or frontend architecture - even if it does not explicitly mention 'components' but describe UI elements, layout, or reusable frontend logic. Do NOT use for full page layouts (use page-layout skill), data fetching logic, state management architecture, or design token definition."
 ---
 
 # Component Architecture
 
-## Before Writing Any Code
+## Workflow
 
-Read the existing codebase before creating anything new. Check whether a similar component already exists. If it does, extend or adapt it rather than creating a duplicate. Identify the single responsibility of the component — if it cannot be described in one sentence, it needs to be split into smaller components.
+### Phase 1 — Audit before writing
 
-Identify all possible states the component can be in before writing a line of code: default, loading, error, empty, and any edge case states specific to this component. All states must be handled — never leave a state unaccounted for.
+Check whether a similar component already exists in the codebase. If it does, extend or adapt it — do not create a duplicate.
 
-## Design Principles
+Define the component's single responsibility in one sentence before writing any code. If you cannot describe it in one sentence, it has more than one responsibility and must be split.
 
-**Visual Hierarchy**
-Structure the component so that the most important element draws the eye first. Achieve this through size, weight, contrast, and position — not decoration.
+### Phase 2 — Map all states
 
-**Consistency**
-Every value used in the component must come from the project's design tokens or utility classes — spacing, color, border radius, typography, and shadow. Never use raw hardcoded values like `padding: 13px` or `color: #3a3a3a`. Hardcoded values break consistency across the product and make design changes painful.
+Before writing any code, enumerate every state the component can be in:
 
-**Whitespace**
-Space is a design element, not absence of content. Use generous, consistent spacing based on the project's spacing scale. Cramped components feel unfinished regardless of code quality.
+- **Default** — normal render with data present
+- **Loading** — data is being fetched
+- **Error** — fetch failed or invalid input
+- **Empty** — data fetch succeeded but returned nothing
+- **Edge cases** — zero items, very long strings, missing optional props
 
-**Feedback**
-Every interactive element must communicate state back to the user. Buttons must have hover, active, and disabled states. Forms must show validation feedback. Async actions must show a loading indicator. Never leave the user uncertain about whether their action was registered.
+All states must be handled. Never leave a state that renders a blank white area or an unhandled exception.
 
-**Accessibility**
-Accessibility is built in from the start, not added later. Every component must be fully keyboard navigable, have meaningful ARIA labels on interactive elements, meet WCAG AA color contrast minimums, and be usable with a screen reader.
+### Phase 3 — Structure
 
-**Responsiveness**
-Design for the smallest screen first, then expand outward. Every component must function correctly at mobile (375px), tablet (768px), and desktop (1280px) breakpoints minimum. Never assume a fixed container width.
+Scaffold in this order:
 
-## Component Structure Rules
+1. TypeScript interface for props
+2. Component shell with named export
+3. Sub-components if the render exceeds ~50 lines or has distinct sections
+4. Implement each state in order: default → loading → error → empty
 
-- **Single responsibility** — one component, one job. If a component handles layout, data, and error display simultaneously, split it.
-- **Props over internal state** — components that receive data via props are easier to test, reuse, and reason about than components that manage their own data.
-- **No prop drilling beyond two levels** — if a prop passes through three or more components to reach its destination, use context or lift state instead.
-- **Component names describe what they render** — `UserProfileCard` is correct. `RenderUser` or `HandleUser` are not.
-- **Maximum 200 lines per component file** — if a file exceeds this, it is a signal to extract sub-components.
-- **No inline styles** — use utility classes or CSS variables. Reserve inline styles only for values that are genuinely dynamic and cannot be expressed in CSS.
-- **No magic numbers** — every spacing, sizing, or timing value must reference a named token or variable, not a raw number with no context.
+### Phase 4 — Review against hard rules
 
-## State Management
+Before writing the summary, run through the Hard Rules section below. Any violation is a blocker — fix before marking complete.
 
-Before adding state to a component, determine where it belongs:
+---
 
-- **UI state** (open/closed, hovered, focused) belongs in the component locally
-- **Shared state** (used by more than one component) must be lifted up or placed in a store — never duplicated across components
-- **Derived state** (calculated from props or existing state) must be computed directly, never stored as redundant state
+## Hard Rules
 
-## After Writing the Component
+**Types**
 
-Before marking the component as complete:
+- Every component must have a named TypeScript interface for its props.
+- Never use `any`, inline type literals, or untyped props.
 
-- Verify every state renders correctly — default, loading, error, and empty
-- Tab through the component using only the keyboard and confirm all interactions work
-- Check the component at mobile, tablet, and desktop widths
-- Add a one to two sentence comment at the top of the file explaining what the component does and when to use it
-- Print a summary listing every file created or modified and any limitations or edge cases identified during implementation
+**Styling**
+
+- Every spacing, color, border radius, and shadow value must come from the project's design or utility classes. Never use hardcoded
+  values like raw pixel numbers or hex colors.
+- Inline styles are only acceptable for values that are genuinely dynamic at runtime and cannot be expressed in a utility class or CSS variable.
+
+**Data and side effects**
+
+- Data must arrive via props or a custom hook. Never fetch, call axios, or make any API call inside a component body or useEffect.
+
+**State**
+
+- Never store derived state. If a value can be computed from props or existing state, compute it directly — do not put it in useState.
+- Never duplicate state across sibling components. Lift to the nearest common parent or a shared store.
+
+**Size and responsibility**
+
+- Maximum 200 lines per component file. Exceeding this is a signal to extract sub-components, not a reason to continue adding code.
+- No prop drilling beyond two levels. If a prop passes through three or more components to reach its destination, use context or lift state.
+- No more than one useEffect per component. Two effects means two responsibilities — split the component.
+
+**Naming**
+
+- Component names must describe what they render, not what they do. Prefixes like Render, Handle, or Do are always wrong.
+
+---
+
+## Reference Files
+
+Read these only when the relevant phase or check requires it — do not load all of them upfront:
+
+`references/design-principles.md` - Output is visually inconsistent or spacing feels wrong.
+
+---
+
+## QA
+
+Run before marking the component complete.
+
+**Automated checks — both must pass with zero errors:**
+
+npx tsc --noEmit
+npx eslint src/components/ComponentName.tsx
+
+**State verification — render each state explicitly, do not just read the code:**
+
+- Default state renders with realistic data
+- Loading state shows a skeleton or spinner — not a blank area
+- Error state shows a user-visible message — check the browser console is clean (no unhandled exceptions)
+- Empty state renders a meaningful empty message — not a blank area
+
+**Hard rules spot checks:**
+
+```bash
+# Must return nothing (no inline styles)
+grep -n 'style={{' src/components/ComponentName.tsx
+
+# Must return nothing (no any types)
+grep -n ': any' src/components/ComponentName.tsx
+
+# Must return nothing (no direct fetch inside component)
+grep -n 'fetch(\|axios\.' src/components/ComponentName.tsx
+```
+
+Any match from the above greps is a blocker — fix before proceeding.
+
+**Keyboard and accessibility:**
+
+- Tab through the component with no mouse — every interactive element is reachable and operable by keyboard alone
+- Every interactive element has a visible focus ring
+- All images have meaningful `alt` text; decorative images have `alt=""`
+
+**Responsiveness — test at these three widths:**
+
+- 375px — no horizontal scroll, no truncated text without tooltip
+- 768px — layout adapts correctly
+- 1280px — no awkward stretching or collapsed elements
+
+**Before submitting:**
+
+- One-to-two sentence comment at the top of the file: what it does, when to use it
+- Co-located test file exists: `ComponentName.test.tsx`
+- t least one test covers the primary user-facing behavior
+- Print a summary: files created or modified, known limitations, edge cases identified during implementation
+
+**Stop condition:** Do not iterate further once all checklist items pass and both automated checks return zero errors. Do not refactor working code for style preferences after QA passes.
